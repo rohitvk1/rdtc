@@ -21,7 +21,9 @@ def create_train_test_split(images_dir, classes_txt, split_txt):
         for f in files:
             if f.endswith('.jpg'):
                 root_split = root.split('/')
-                cls = root_split[-1]
+                #cls = root_split.split('\\')
+                cls = cls.split('\\')[-1]
+                print(cls)
                 file_path = join(root_split[-2], root_split[-1], f)
                 data_str.append('{} {} {}'.format(i,
                                                   file_path,
