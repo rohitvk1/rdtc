@@ -250,7 +250,7 @@ class RDTC(nn.Module):
 
         return classification, state, explicit_memory, attribute_idx
 
-    def recurrent_decision_tree(self, binary_features, labels):
+    def recurrent_decision_tree(self, binary_features, labels): # Try logging for visualizing thr tree
         # Outputs for every iteration
         all_classifications = []
         all_attribute_idx = []
