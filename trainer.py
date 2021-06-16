@@ -27,7 +27,7 @@ class Trainer:
     def test(self):
         self.run_model('test', self.dataloaders['test'])
 
-    def run_model(self, mode, data_laoder, epoch_start=0, epoch_end=1):
+    def run_model(self, mode, data_loader, epoch_start=0, epoch_end=1):
         max_cls_accuracy = 0
         max_cls_agg_accuracy = 0
 
@@ -41,22 +41,33 @@ class Trainer:
         self.model.reset_stats()
 
         # Train the Model
-        epoch_iter = range(epoch_start, epoch_end)
+        epoch_iter = range(epoch_start, epoch_end)  
+        # epoch_iter: range(0, 100)
+
         if mode == 'train':
-            epoch_iter = tqdm(epoch_iter, desc=f'{mode.upper()} Epochs')
+            epoch_iter = tqdm(epoch_iter, desc=f'{mode.lower()} Epochs')
+
         for epoch in epoch_iter:
             stats = self.init_stats()
-            tqdm_step = tqdm(data_laoder, total=len(data_laoder))
+            tqdm_step = tqdm(data_loader, total=len(data_loader))  
+            # len(data_loader)=43
             for data in tqdm_step:
-                images, labels = data
+                images, labels = data    
+                # images: torch.Size([128, 3, 224, 224]), 
+                # labels: 128
+
                 images = images.to(self.device)
                 labels = labels.to(self.device)
 
                 if mode == 'train':
                     self.optimizer.zero_grad()
+                    # need to set the gradients to zero before starting to do backpropragation because PyTorch 
+                    # accumulates the gradients on subsequent backward passes
 
                 with ctx:
-                    classification, loss = self.model(images, labels)
+                    classification, loss = self.model(images, labels)  # calls forward in RDTC
+                    # classification: 25
+                    # loss = continuous value
 
                 if mode == 'train':
                     loss.backward()
@@ -101,10 +112,10 @@ class Trainer:
     def init_stats(self):
         stats = {}
         n_stats = self.model.max_iters
-        stats['correct_1'] = np.zeros((n_stats, self.model.num_classes))
-        stats['correct_5'] = np.zeros((n_stats, self.model.num_classes))
+        stats['correct_1'] = np.zeros((n_stats, self.model.num_classes))   # (25, 200)
+        stats['correct_5'] = np.zeros((n_stats, self.model.num_classes))   # (25, 200)
         stats['total'] = 0
-        stats['total_cnt'] = np.zeros((1, self.model.num_classes))
+        stats['total_cnt'] = np.zeros((1, self.model.num_classes))         # (1, 200)
         stats['total_loss'] = 0
         return stats
 
@@ -115,7 +126,13 @@ class Trainer:
 
         for k in range(len(classification)):
             ctopk, target_cnt = self.topk_correct(classification[k].data, labels, (1, 5))
+            # ctopk: 2
+            # target_cnt: 200
+
             c1, c5 = ctopk
+            # c1: 200
+            # c5: 200
+
             stats['correct_1'][k] += c1
             stats['correct_5'][k] += c5
 
@@ -167,22 +184,37 @@ class Trainer:
                    os.path.join(self.log_path, '{}.pth'.format(name)))
 
     def topk_correct(self, output, target, topk=(1,)):
+        # Paramters: 
+        #   output: torch.Size([128, 200])
+        #   target: torch.Size([128])
+        #   topk: (1, 5) 
+
         maxk = max(topk)
+        # maxk: 5
 
         _, pred = output.topk(maxk, 1, True, True)
+        # pred: torch.Size([128, 5])
+
         pred = pred.t()
+        # pred: torch.Size([5, 128])
         correct = pred.eq(target.view(1, -1).expand_as(pred))
+        # correct: torch.Size([5, 128])
 
         target_masks = []
         target_cnt = []
         for i in range(self.model.num_classes):
             target_masks.append((target == i).unsqueeze(0))
             target_cnt.append(target_masks[i].sum().item())
+        # target_masks: 200
+        # target_cnt: 200
 
         res = []
         for k in topk:
             correct_k = [(correct[:k] * tm).reshape(-1).float().sum(0, keepdim=True).item() for tm in target_masks]
+            # correct_k: 200
             res.append(np.array(correct_k))
+
+        # res: 2
         return res, np.array(target_cnt)
 
     def log_stats(self, phase, epoch, epoch_stats):

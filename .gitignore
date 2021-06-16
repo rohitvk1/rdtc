@@ -1,6 +1,7 @@
 ### Project specific gitignore
 data/
 log/
+pretrained/
 
 ### Python gitignore template from https://github.com/github/gitignore
 
