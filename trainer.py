@@ -2,9 +2,11 @@ import os
 from contextlib import nullcontext
 
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+import torchvision.transforms as transforms
 
 
 class Trainer:
@@ -53,8 +55,32 @@ class Trainer:
             # len(data_loader)=43
             for data in tqdm_step:
                 images, labels = data    
-                # images: torch.Size([128, 3, 224, 224]), 
+                # images: torch.Size([128, 3, 224, 224])
                 # labels: 128
+
+                image_id = 0
+                tensor_image = images
+                invTrans = transforms.Compose([ transforms.Normalize(mean = [ 0., 0., 0. ],
+                                                                     std = [ 1/0.229, 1/0.224, 1/0.225 ]),
+                                                transforms.Normalize(mean = [ -0.485, -0.456, -0.406 ],
+                                                                     std = [ 1., 1., 1. ]),
+                                               ])
+
+                tensor_image = invTrans(tensor_image)
+                tensor_image = tensor_image[image_id,:,:,:]
+                tensor_image = tensor_image.permute(1, 2, 0)
+                tensor_image = tensor_image.detach().numpy()
+
+                f1 = open("data/cub/classes.txt", "r")
+                for i, line in enumerate(f1):
+                    if(i==labels[image_id]):
+                        label_name = line[3:]
+
+                print("\nGround truth class: {}\n".format(label_name))
+                plt.imshow(tensor_image)
+                plt.show()
+                f1.close()
+
 
                 images = images.to(self.device)
                 labels = labels.to(self.device)

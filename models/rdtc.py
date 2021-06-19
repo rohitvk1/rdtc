@@ -4,9 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
+import matplotlib.pyplot as plt
 from .cnn import get_cnn
-
+import re
 
 class RDTC(nn.Module):
     def __init__(self, num_classes,
@@ -310,18 +310,40 @@ class RDTC(nn.Module):
 
         else:
             hard_selection = self.argmax(selection_logits, dim=1)
+            # hard_selection: torch.Size([128, 312])
 
         # Get single decision
 
         decision = (hard_selection.unsqueeze(2) * binary_features) 
-        # decision: torch.Size([128, 312, 2]) 
+        # decision: torch.Size([128, 312, 2])
+
+        # Index of decision
+        attribute_idx = hard_selection.max(dim=1)[1]
+        # attribute_idx: 128
+        
+        '''Added code'''
+
+        image_id = 0
+        #print(attribute_idx[image_id])
+        decision_array = decision[image_id,:,:].cpu().detach().numpy()
+
+        decision_index = np.argmax(decision_array.sum(1))
+
+        decision_for_attribute = decision[image_id,decision_index,:].cpu().detach().numpy()
+
+        decision_value = 0
+        if decision_for_attribute[0] == 1:
+        	decision_value = 1
+
+        f = open("data/cub/attributes.txt", "r")
+        for i, line in enumerate(f):
+        	if(i==attribute_idx[image_id]-1):
+        		attribute_name = line[3:]
+        print("Attribute_name:{}, decision:{}\n".format(attribute_name,decision_value))
+        f.close()
 
         decision = decision.view(-1, self.attribute_size * self.decision_size)   
         # decision: torch.Size([128, 624])
-
-        # Index of decision
-        attribute_idx = hard_selection.max(dim=1)[1]  
-        # attribute_idx: 128
 
         return decision, attribute_idx
 
@@ -336,7 +358,7 @@ class RDTC(nn.Module):
 
         # Make binary decision
 
-        decision, attribute_idx = self.make_decision(lstm_out, binary_features) 
+        decision, attribute_idx = self.make_decision(lstm_out, binary_features)
         # decision: torch.Size([128, 624])
         # attribute_idx: 128
 
@@ -363,6 +385,7 @@ class RDTC(nn.Module):
         # Get current classification
         classification = self.classifier(scaled_em)  
         # classification: torch.Size([128, 200])
+        #print(classification[0,:])
 
         return classification, state, explicit_memory, attribute_idx
 
@@ -397,12 +420,13 @@ class RDTC(nn.Module):
             
             classification, state, explicit_memory, attribute_idx = self.run_rdt_iteration(  
                 binary_features, state, explicit_memory
-            )  
+            )
+            
             # classification: torch.Size([128, 200])
             # state: (torch.Size([1, 128, 1024]), torch.Size([1, 128, 1024]))
             # explicit_memory: torch.Size([128, 624])
             # attribute_idx: 128
-                                                 
+
             if not self.training and self.threshold < 1.:
                 all_threshold_masks.append(threshold_mask.clone())
 
@@ -410,17 +434,57 @@ class RDTC(nn.Module):
                     classification, threshold_mask, threshold_classification
                 )
 
+            image_id = 0
+            classification_image = classification[image_id,:].cpu().detach().numpy()
+            #predicted_class_id = np.argmax(classification_image)
+
+            top_prediciton_ids = classification_image.argsort()[-3:][::-1]
+            top_predictions_values = classification_image[top_prediciton_ids]
+            normalized_top_predictions_values = top_predictions_values/np.sum(top_predictions_values)
+
+            class_names = []
+            f1 = open("data/cub/classes.txt", "r")
+            for i, line in enumerate(f1):
+            	class_name = line[3:-1]
+            	pattern = r'[0-9]'
+            	class_name = re.sub(pattern, '', class_name)
+            	class_name = class_name.replace('.','')
+            	class_names.append(class_name) 
+
+            	#if(i==predicted_class_id):
+            		#predicted_class = line[3:]
+
+            top_classes = [class_names[k] for k in top_prediciton_ids]
+            print(top_classes, normalized_top_predictions_values)		
+            #print("Predicted class: {}\n".format(predicted_class))
             all_classifications.append(classification)
             all_attribute_idx.append(attribute_idx)
 
         return all_classifications, all_attribute_idx, all_threshold_masks # 25, 25, None
 
+    # def tensor_to_PIL(tensor): 
+    # 	unloader = transforms.ToPILImage()
+    # 	image = tensor.cpu().clone() 
+    # 	image = image.squeeze(0) 
+    # 	image = unloader(image) 
+    # 	return image
+    
     def forward(self, images, labels):
         # Get categorical features once
 
         # Parameters:
         #	images: torch.Size([128, 3, 224, 224]) 
         #	labels: torch.Size([128])
+
+        tensor_image = images[0,:,:,:]
+        tensor_image = tensor_image.permute(1, 2, 0)
+        tensor_image = tensor_image.cpu().detach().numpy()
+
+        # tensor_label = labels[0].cpu().detach().numpy()
+        # print(tensor_label)
+
+        # plt.imshow(tensor_image)
+        # plt.show()
 
         # binary_features(attributes or features)?
         binary_features, bin_attribute_logits = self.attribute_based_learner(images)    
