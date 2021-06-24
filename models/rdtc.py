@@ -7,7 +7,6 @@ import numpy as np
 
 from .cnn import get_cnn
 
-
 class RDTC(nn.Module):
     def __init__(self, num_classes,
                  dataset, decision_size=2, max_iters=30, attribute_size=20,
@@ -51,6 +50,7 @@ class RDTC(nn.Module):
 
         self.classifier = nn.Sequential(
                 nn.Linear(attribute_size * decision_size, hidden_size),
+                #nn.Mish(inplace=True),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(hidden_size),
                 nn.Linear(hidden_size, num_classes)
@@ -59,6 +59,7 @@ class RDTC(nn.Module):
         self.question_mlp = nn.Sequential(
                 nn.BatchNorm1d(hidden_size),
                 nn.Linear(hidden_size, hidden_size),
+                #nn.Mish(inplace=True),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(hidden_size),
                 nn.Linear(hidden_size, attribute_size)
@@ -67,9 +68,11 @@ class RDTC(nn.Module):
         self.attribute_mlp = nn.Sequential(
                 nn.BatchNorm1d(cnn_out_size),
                 nn.Linear(cnn_out_size, hidden_size),
+                #nn.Mish(inplace=True),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(hidden_size),
                 nn.Linear(hidden_size, hidden_size),
+                #nn.Mish(inplace=True),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(hidden_size),
                 nn.Linear(hidden_size, attribute_size * decision_size)
@@ -77,6 +80,7 @@ class RDTC(nn.Module):
 
         self.pre_lstm = nn.Sequential(
                 nn.Linear(2 * attribute_size * decision_size, hidden_size),
+                #nn.Mish(inplace=True),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(hidden_size)
         )

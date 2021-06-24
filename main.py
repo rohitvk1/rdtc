@@ -101,8 +101,8 @@ if __name__ == '__main__':
         optimizer = torch.optim.SGD(params, lr=args.learning_rate, momentum=0.9,
                                     weight_decay=args.weight_decay)
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size,
-                                                gamma=0.1)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=10)
 
     if args.eval:
         model_state_dict = torch.load(args.eval)
