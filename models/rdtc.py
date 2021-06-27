@@ -8,6 +8,30 @@ import numpy as np
 from .cnn import get_cnn
 
 
+class PathTracker():
+    def __init__(self):
+        self.cube = []
+
+    def add_paths(self, batch_decision_path_candidates) -> None:
+        collision = False
+        for decision_path_candidate in batch_decision_path_candidates:
+            for true_path in self.cube:
+                if np.array_equal(decision_path_candidate, true_path):
+                    collision = True
+                    continue
+            if not collision:
+                self.cube.append(decision_path_candidate)
+
+    def reset_cube(self):
+        self.cube = []
+
+    def get_all_paths(self):
+        return self.cube
+
+    def get_all_paths_numpy(self):
+        return np.dstack(self.cube)
+
+
 class RDTC(nn.Module):
     def __init__(self, num_classes,
                  dataset, decision_size=2, max_iters=30, attribute_size=20,
@@ -20,6 +44,7 @@ class RDTC(nn.Module):
         self.attribute_mtx = attribute_mtx
         self.attribute_coef = attribute_coef if attribute_mtx is not None else 0.
         self.decision_size = decision_size
+        self.path_tracker = PathTracker()
         self.tau_initial = tau_initial
         self.tau_target = tau_target
         self.max_iters = max_iters
@@ -224,6 +249,7 @@ class RDTC(nn.Module):
         # Index of decision
         attribute_idx = hard_selection.max(dim=1)[1]
 
+        print(decision)
         return decision, attribute_idx
 
     def run_rdt_iteration(self, binary_features, state, explicit_memory):
@@ -248,12 +274,13 @@ class RDTC(nn.Module):
         # Get current classification
         classification = self.classifier(scaled_em)
 
-        return classification, state, explicit_memory, attribute_idx
+        return classification, state, explicit_memory, attribute_idx, decision
 
     def recurrent_decision_tree(self, binary_features, labels): # Try logging for visualizing thr tree
         # Outputs for every iteration
         all_classifications = []
         all_attribute_idx = []
+        decision_path_candidates = []
 
         if not self.training and self.threshold < 1.:
             all_threshold_masks = []
@@ -268,9 +295,10 @@ class RDTC(nn.Module):
         explicit_memory = None
 
         for j in range(self.max_iters):
-            classification, state, explicit_memory, attribute_idx = self.run_rdt_iteration(
+            classification, state, explicit_memory, attribute_idx, decision = self.run_rdt_iteration(
                 binary_features, state, explicit_memory
             )
+            decision_path_candidates.append(decision)
 
             if not self.training and self.threshold < 1.:
                 all_threshold_masks.append(threshold_mask.clone())
@@ -281,6 +309,8 @@ class RDTC(nn.Module):
 
             all_classifications.append(classification)
             all_attribute_idx.append(attribute_idx)
+
+        self.path_tracker.add_paths(decision_path_candidates)
 
         return all_classifications, all_attribute_idx, all_threshold_masks
 
