@@ -15,12 +15,8 @@ class PathTracker():
     def add_paths(self, batch_decision_path_candidates) -> None:
         collision = False
         for decision_path_candidate in batch_decision_path_candidates:
-            for true_path in self.cube:
-                if np.array_equal(decision_path_candidate, true_path):
-                    collision = True
-                    continue
-            if not collision:
-                self.cube.add(decision_path_candidate)
+            #np.ndarray is not hashable, therefore cast to tuple
+            self.cube.add(tuple(decision_path_candidate))
 
     def reset_cube(self):
         self.cube = {}
