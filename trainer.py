@@ -9,12 +9,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 class Trainer:
     def __init__(self, model, dataloaders, optimizer, scheduler, num_epochs,
-                 device, log_path):
+                 device, log_path, name="unnamed"):
 
         self.model = model
         self.dataloaders = dataloaders
         self.optimizer = optimizer
         self.scheduler = scheduler
+        self.name = name
         self.num_epochs = num_epochs
         self.device = device
         self.log_path = log_path
@@ -95,8 +96,9 @@ class Trainer:
 
         if mode != 'train':
             self.model.train()
-
         print("number of unique global paths: " len(self.model.path_tracker.get_all_paths()))
+        with open(f"{self.name}_classification_result", "w") as f:
+            f.write(self.model.pred_tracker.get_all_preds())
     return stats
 
     def init_stats(self):
