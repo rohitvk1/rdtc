@@ -10,7 +10,7 @@ from .cnn import get_cnn
 
 class PathTracker():
     def __init__(self):
-        self.cube = []
+        self.cube = {}
 
     def add_paths(self, batch_decision_path_candidates) -> None:
         collision = False
@@ -20,10 +20,10 @@ class PathTracker():
                     collision = True
                     continue
             if not collision:
-                self.cube.append(decision_path_candidate)
+                self.cube.add(decision_path_candidate)
 
     def reset_cube(self):
-        self.cube = []
+        self.cube = {}
 
     def get_all_paths(self):
         return self.cube
