@@ -12,16 +12,13 @@ class PathTracker():
     def __init__(self):
         self.cube = {}
 
-
     def add_paths(self, batch_decision_path_candidates) -> None:
         # batch_decision_path_candidates iter x batch_size x attribs
         collision = False
         batch_decision_path_candidates = np.dstack(batch_decision_path_candidates)
-        for i in batch_decision_path_candidates.shape[1]
-            decision_path_candidate = batch_decision_path_candidates[:, i, :]:
+        for i in batch_decision_path_candidates.shape[1]:
+            decision_path_candidate = batch_decision_path_candidates[:, i, :]
             #np.ndarray is not hashable, therefore cast to tuple
-
-            self.cube.add(tuple(decision_path_candidate))
 
     def reset_cube(self):
         self.cube = {}
