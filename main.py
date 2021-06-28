@@ -105,7 +105,7 @@ if __name__ == '__main__':
                                                 gamma=0.1)
 
     if args.eval:
-        model_state_dict = torch.load(args.eval)
+        model_state_dict = torch.load(args.eval, map_location=torch.device('cpu'))
         model.load_state_dict(model_state_dict)
         log_dir = os.path.join('log', 'test')
     else:
@@ -128,3 +128,8 @@ if __name__ == '__main__':
         trainer.test()
     else:
         trainer.train()
+
+    all_paths = model.path_tracker.get_all_paths()
+    print(all_paths)
+    print(len(all_paths))
+    model.path_tracker.get_all_paths_numpy()

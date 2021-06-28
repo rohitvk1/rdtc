@@ -96,7 +96,8 @@ class Trainer:
         if mode != 'train':
             self.model.train()
 
-        return stats
+        print("number of unique global paths: " len(self.model.path_tracker.get_all_paths))
+    return stats
 
     def init_stats(self):
         stats = {}
